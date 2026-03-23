@@ -125,12 +125,28 @@ Schema:
   "cycle": { "startDate": <"YYYY-MM-DD"> } or null
 }
 
+Word-to-number scale (apply to mood, energy, AND focus):
+1 = crisis, rock bottom, non-functional, dying, can't cope
+2 = exhausted, terrible, awful, horrible, destroyed, dreadful
+3 = tired, rough, bad, low, drained, burnt out, really struggling
+4 = below average, off, sluggish, foggy, not great, a bit flat
+5 = meh, ok, okay, so-so, fine, neutral, average, middling, alright, not bad not good
+6 = decent, manageable, getting there, okay-ish, not bad, holding up, so so
+7 = good, pretty good, solid, well, doing well, feeling good, not bad
+8 = great, really good, strong, sharp, clear, energised, on it, flowing
+9 = amazing, excellent, fantastic, very good, energized, switched on, firing
+10 = perfect, best ever, incredible, unstoppable, exceptional
+
+Focus-specific words: scattered/distracted/zoning out=3, foggy/unfocused=4, managing=5, on task=7, locked in/flow state=9
+Energy-specific words: dragging/sluggish=3, flat=4, wired/buzzing=8, crashing=2
+
 Rules:
-1. Set checkin only if mood, energy, focus, or general wellbeing is mentioned. Infer numbers from words: exhausted/terrible=2, tired/rough=3, meh/ok=5, decent/okay=6, good=7, great/energised=9. null if truly unmentioned.
+1. Set checkin only if mood, energy, focus, or general wellbeing is mentioned. Use the scale above to translate any word or phrase. Use null ONLY if that specific dimension is genuinely not mentioned at all.
 2. Add a task entry for every actionable item. Convert relative dates to ISO format based on today (${todayDate}).
 3. Set journal only for emotional, reflective, or personal content that is not a task. null if none.
 4. Set cycle if the user mentions their period started, first day of cycle, or which day of their cycle they are on. Calculate startDate as today minus (dayOfCycle - 1). If period started today, startDate is today. null if not mentioned.
 5. If a category has no data use null (for checkin/journal/cycle) or [] (for tasks).
+6. If the user gives a general statement like "feeling good today" with no per-dimension breakdown, apply the same translated number to all three (mood, energy, focus).
 
 Brain dump:
 """
@@ -147,7 +163,12 @@ Return ONLY valid JSON — no markdown, no explanation.
 Schema (include only the requested fields):
 { ${missingFields.map((f) => `"${f}": <1-10 or null>`).join(', ')} }
 
-Infer numbers from words: exhausted/terrible=2, tired/rough=3, meh/ok=5, decent=6, good=7, great/energised=9. If a field is not mentioned use null.
+Translate words to numbers using this scale:
+1=crisis/rock bottom, 2=exhausted/terrible/awful, 3=tired/rough/bad/drained, 4=off/sluggish/foggy/flat,
+5=meh/ok/okay/so-so/fine/neutral/average, 6=decent/manageable/not bad, 7=good/pretty good/solid,
+8=great/strong/sharp/energised, 9=amazing/excellent/fantastic, 10=perfect/incredible
+Focus extras: scattered/distracted=3, locked in/flow=9. Energy extras: dragging=3, wired/buzzing=8.
+Use null ONLY if the field is genuinely not mentioned at all.
 
 User reply: "${text}"`;
 
