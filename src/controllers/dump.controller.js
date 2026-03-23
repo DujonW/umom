@@ -62,22 +62,24 @@ async function dump(req, res, next) {
     const isComplete = hasAnyCheckin && missing.length === 0;
 
     let pendingId = null;
+    let notionPageId = null;
 
     if (hasAnyCheckin) {
       // Always save immediately with whatever fields exist — never block on completeness
       const savedPage = await saveCheckin({ ...ci, aiResponse: '', cyclePhase: null }).catch(() => null);
+      notionPageId = savedPage?.id ?? null;
       saved.checkin = { mood: ci.mood, energy: ci.energy, focus: ci.focus };
 
-      if (!isComplete) {
+      if (!isComplete && notionPageId) {
         // Store pending with the Notion page ID so follow-up can update the same entry
-        pendingId = pending.save(ci, savedPage?.id ?? null);
+        pendingId = pending.save(ci, notionPageId);
       }
     }
 
     // Generate Mara's response
     const savedSummary = buildSummary(saved);
     const followUpInstruction = pendingId
-      ? `\n\nAlso ask conversationally (in one sentence) for the missing check-in fields: ${missing.join(', ')} (scale 1-10 or describe).`
+      ? `\n\nAlso ask conversationally (in one sentence) for the missing check-in fields: ${missing.join(', ')} (describe in words or numbers).`
       : '';
 
     const client = getClaudeClient();
@@ -92,6 +94,11 @@ async function dump(req, res, next) {
     }))
       .then((r) => r.content.find((b) => b.type === 'text')?.text?.trim() || '')
       .catch(() => 'Got it — everything has been saved.');
+
+    // Write AI response back to the Notion check-in entry
+    if (saved.checkin && notionPageId) {
+      updateCheckin(notionPageId, { aiResponse }).catch(() => {});
+    }
 
     res.json(success({ saved, pendingId, aiResponse }, 'Brain dump processed'));
   } catch (err) {

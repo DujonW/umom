@@ -27,10 +27,17 @@ function getMonthRange(date = new Date()) {
 }
 
 /**
- * Formats a Date as YYYY-MM-DD for Notion date properties.
+ * Returns the IANA timezone from env, falling back to the system default.
+ */
+function getTZ() {
+  return process.env.TZ_SCHEDULER || Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/**
+ * Formats a Date as YYYY-MM-DD in the user's local timezone (not UTC).
  */
 function formatForNotion(date) {
-  return new Date(date).toISOString().split('T')[0];
+  return new Intl.DateTimeFormat('en-CA', { timeZone: getTZ() }).format(new Date(date));
 }
 
 /**
@@ -41,7 +48,7 @@ function parseFromNotion(dateStr) {
 }
 
 /**
- * Returns today's date as YYYY-MM-DD.
+ * Returns today's date as YYYY-MM-DD in the user's local timezone.
  */
 function today() {
   return formatForNotion(new Date());
