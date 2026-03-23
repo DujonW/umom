@@ -1,5 +1,5 @@
 const { config } = require('../config');
-const { queryDatabase, createPage, formatRichText, extractProp } = require('./notion.service');
+const { queryDatabase, createPage, updatePage, formatRichText, extractProp } = require('./notion.service');
 const { today, formatForNotion } = require('../utils/dateHelpers');
 
 const DB_ID = () => config.notion.databases.journal;
@@ -8,9 +8,10 @@ async function createEntry(data) {
   const page = await createPage(DB_ID(), {
     Date: { date: { start: today() } },
     Entry: { rich_text: formatRichText(data.entry) },
-    Mood: data.mood ? { number: data.mood } : undefined,
+    Mood: data.mood != null ? { number: data.mood } : undefined,
     'AI Reflection': { rich_text: formatRichText(data.aiReflection || '') },
     Type: data.type ? { select: { name: data.type } } : { select: { name: 'General' } },
+    'Check-in': data.checkinId ? { relation: [{ id: data.checkinId }] } : undefined,
   });
   return parseJournalPage(page);
 }
@@ -50,4 +51,10 @@ function parseJournalPage(page) {
   };
 }
 
-module.exports = { createEntry, getEntries, getEntry };
+async function updateEntry(pageId, updates) {
+  const props = {};
+  if (updates.aiReflection != null) props['AI Reflection'] = { rich_text: formatRichText(updates.aiReflection) };
+  return updatePage(pageId, props);
+}
+
+module.exports = { createEntry, updateEntry, getEntries, getEntry };

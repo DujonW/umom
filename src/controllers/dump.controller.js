@@ -2,7 +2,7 @@ const { extractFromDump } = require('../services/dump.service');
 const { saveCheckin, updateCheckin } = require('../services/checkin.service');
 const { createTask } = require('../services/task.service');
 const { createCalendarEvent } = require('../services/calendar-event.service');
-const { createEntry } = require('../services/journal.service');
+const { createEntry, updateEntry: updateJournalEntry } = require('../services/journal.service');
 const { logCycle } = require('../services/period.service');
 const pending = require('../services/pending-checkin.service');
 const { getClaudeClient } = require('../config/openai');
@@ -23,6 +23,28 @@ async function dump(req, res, next) {
 
     const extracted = await extractFromDump(text);
     const saved = { checkin: null, tasks: [], events: [], journal: null, cycle: null };
+
+    // Determine check-in completeness before any saves
+    const ci = extracted.checkin;
+    const hasAnyCheckin = ci && CHECKIN_FIELDS.some((f) => ci[f] != null);
+    const missing = ci ? CHECKIN_FIELDS.filter((f) => ci[f] == null) : [];
+    const isComplete = hasAnyCheckin && missing.length === 0;
+
+    // Save check-in FIRST so its page ID can be linked to tasks and journal entries
+    let pendingId = null;
+    let notionPageId = null;
+
+    if (hasAnyCheckin) {
+      const savedPage = await saveCheckin({ ...ci, aiResponse: '', cyclePhase: null }).catch(() => null);
+      notionPageId = savedPage?.id ?? null;
+      saved.checkin = { mood: ci.mood, energy: ci.energy, focus: ci.focus };
+
+      if (!isComplete && notionPageId) {
+        // Store pending with the Notion page ID so follow-up can update the same entry
+        pendingId = pending.save(ci, notionPageId);
+      }
+    }
+
     const saves = [];
 
     // Save cycle log immediately if period start was mentioned
@@ -34,11 +56,11 @@ async function dump(req, res, next) {
       );
     }
 
-    // Save tasks and journal immediately — these don't need follow-up
+    // Save tasks — linked to check-in if one was saved
     for (const task of (extracted.tasks || [])) {
       if (task.title) {
         saves.push(
-          createTask({ title: task.title, priority: task.priority || null, dueDate: task.dueDate || null, status: 'To Do' })
+          createTask({ title: task.title, priority: task.priority || null, dueDate: task.dueDate || null, status: 'To Do', checkinId: notionPageId })
             .then((t) => { saved.tasks.push({ title: t.title || task.title, dueDate: task.dueDate || null }); })
             .catch(() => {})
         );
@@ -56,37 +78,18 @@ async function dump(req, res, next) {
       }
     }
 
+    // Save journal — linked to check-in, mood carried over from check-in
+    let journalPageId = null;
     const jn = extracted.journal;
     if (jn?.entry) {
       saves.push(
-        createEntry({ entry: jn.entry, type: jn.type || 'General', aiReflection: '' })
-          .then(() => { saved.journal = jn.entry.slice(0, 80); })
+        createEntry({ entry: jn.entry, type: jn.type || 'General', aiReflection: '', mood: ci?.mood ?? null, checkinId: notionPageId })
+          .then((j) => { saved.journal = jn.entry.slice(0, 80); journalPageId = j?.id ?? null; })
           .catch(() => {})
       );
     }
 
     await Promise.all(saves);
-
-    // Determine check-in completeness
-    const ci = extracted.checkin;
-    const hasAnyCheckin = ci && CHECKIN_FIELDS.some((f) => ci[f] != null);
-    const missing = ci ? CHECKIN_FIELDS.filter((f) => ci[f] == null) : [];
-    const isComplete = hasAnyCheckin && missing.length === 0;
-
-    let pendingId = null;
-    let notionPageId = null;
-
-    if (hasAnyCheckin) {
-      // Always save immediately with whatever fields exist — never block on completeness
-      const savedPage = await saveCheckin({ ...ci, aiResponse: '', cyclePhase: null }).catch(() => null);
-      notionPageId = savedPage?.id ?? null;
-      saved.checkin = { mood: ci.mood, energy: ci.energy, focus: ci.focus };
-
-      if (!isComplete && notionPageId) {
-        // Store pending with the Notion page ID so follow-up can update the same entry
-        pendingId = pending.save(ci, notionPageId);
-      }
-    }
 
     // Generate Mara's response
     const savedSummary = buildSummary(saved);
@@ -111,9 +114,12 @@ async function dump(req, res, next) {
       .then((r) => r.content.find((b) => b.type === 'text')?.text?.trim() || '')
       .catch(() => 'Got it — everything has been saved.');
 
-    // Write AI response back to the Notion check-in entry
+    // Write AI response back to check-in and journal entries
     if (saved.checkin && notionPageId) {
       updateCheckin(notionPageId, { aiResponse }).catch(() => {});
+    }
+    if (journalPageId) {
+      updateJournalEntry(journalPageId, { aiReflection: aiResponse }).catch(() => {});
     }
 
     res.json(success({ saved, pendingId, aiResponse }, 'Brain dump processed'));

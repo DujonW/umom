@@ -23,6 +23,7 @@ async function createTask(data) {
     Tags: data.tags?.length ? { multi_select: data.tags.map((t) => ({ name: t })) } : undefined,
     'Estimated Minutes': data.estimatedMinutes ? { number: data.estimatedMinutes } : undefined,
     'Due Date': data.dueDate ? { date: { start: data.dueDate } } : undefined,
+    'Check-in': data.checkinId ? { relation: [{ id: data.checkinId }] } : undefined,
   });
   return parseTaskPage(page);
 }
