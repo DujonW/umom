@@ -22,6 +22,7 @@ async function createTask(data) {
     Status: { select: { name: data.status || 'To Do' } },
     Tags: data.tags?.length ? { multi_select: data.tags.map((t) => ({ name: t })) } : undefined,
     'Estimated Minutes': data.estimatedMinutes ? { number: data.estimatedMinutes } : undefined,
+    'Due Date': data.dueDate ? { date: { start: data.dueDate } } : undefined,
   });
   return parseTaskPage(page);
 }
@@ -79,6 +80,7 @@ function parseTaskPage(page) {
     tags: extractProp(props.Tags),
     estimatedMinutes: extractProp(props['Estimated Minutes']),
     completedAt: extractProp(props['Completed At']),
+    dueDate: extractProp(props['Due Date']),
   };
 }
 

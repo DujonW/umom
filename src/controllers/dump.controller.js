@@ -37,8 +37,8 @@ async function dump(req, res, next) {
     for (const task of (extracted.tasks || [])) {
       if (task.title) {
         saves.push(
-          createTask({ title: task.title, priority: task.priority || null, status: 'To Do' })
-            .then((t) => { saved.tasks.push(t.title || task.title); })
+          createTask({ title: task.title, priority: task.priority || null, dueDate: task.dueDate || null, status: 'To Do' })
+            .then((t) => { saved.tasks.push({ title: t.title || task.title, dueDate: task.dueDate || null }); })
             .catch(() => {})
         );
       }
@@ -82,6 +82,10 @@ async function dump(req, res, next) {
       ? `\n\nAlso ask conversationally (in one sentence) for the missing check-in fields: ${missing.join(', ')} (describe in words or numbers).`
       : '';
 
+    const dateVerification = hasInferredDates(saved)
+      ? '\n\nI inferred due dates from the text — mention each task and its date in your response and ask in one sentence if the dates look right.'
+      : '';
+
     const client = getClaudeClient();
     const aiResponse = await withRetry(() => client.messages.create({
       model: config.claude.model,
@@ -89,7 +93,7 @@ async function dump(req, res, next) {
       system: CORE_SYSTEM_PROMPT,
       messages: [{
         role: 'user',
-        content: `I just did a brain dump: "${text}"${savedSummary ? `\n\nCaptured: ${savedSummary}` : ''}\n\nAcknowledge what I shared as Mara.${followUpInstruction} Under 150 words.`,
+        content: `I just did a brain dump: "${text}"${savedSummary ? `\n\nCaptured: ${savedSummary}` : ''}\n\nAcknowledge what I shared as Mara.${followUpInstruction}${dateVerification} Under 150 words.`,
       }],
     }))
       .then((r) => r.content.find((b) => b.type === 'text')?.text?.trim() || '')
@@ -184,10 +188,19 @@ async function followup(req, res, next) {
 function buildSummary(saved) {
   const parts = [];
   if (saved.checkin) parts.push('check-in');
-  if (saved.tasks.length) parts.push(`${saved.tasks.length} task(s): ${saved.tasks.join(', ')}`);
+  if (saved.tasks.length) {
+    const taskList = saved.tasks
+      .map((t) => t.dueDate ? `"${t.title}" (due ${t.dueDate})` : `"${t.title}"`)
+      .join(', ');
+    parts.push(`${saved.tasks.length} task(s): ${taskList}`);
+  }
   if (saved.journal) parts.push('journal entry');
   if (saved.cycle) parts.push(`cycle log (started ${saved.cycle})`);
   return parts.join(', ');
+}
+
+function hasInferredDates(saved) {
+  return saved.tasks.some((t) => t.dueDate);
 }
 
 module.exports = { dump, followup };
