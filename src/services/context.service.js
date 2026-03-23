@@ -1,6 +1,7 @@
 const { getCheckinHistory } = require('./checkin.service');
 const { getTasks } = require('./task.service');
 const { getCurrentPhase } = require('./period.service');
+const { getUpcomingEvents } = require('./calendar-event.service');
 const { today, formatForNotion } = require('../utils/dateHelpers');
 
 const PHASE_IMPACT = {
@@ -25,10 +26,11 @@ async function assembleContext({ days = 5 } = {}) {
 
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const [checkins, tasks, phase] = await Promise.all([
+  const [checkins, tasks, phase, events] = await Promise.all([
     getCheckinHistory(startDate, new Date()).catch(() => []),
     getTasks({}).catch(() => []),
     getCurrentPhase().catch(() => null),
+    getUpcomingEvents(14).catch(() => []),
   ]);
 
   const lines = ['--- Your Recent Context ---'];
@@ -50,6 +52,15 @@ async function assembleContext({ days = 5 } = {}) {
     const inProgress = tasks.filter((t) => t.status === 'In Progress').length;
     const todo = tasks.filter((t) => t.status === 'To Do').length;
     lines.push(`Tasks: ${done} done, ${inProgress} in progress, ${todo} to do`);
+  }
+
+  // Upcoming calendar events: next 14 days
+  if (events.length > 0) {
+    const eventLines = events.slice(0, 5).map((e) => {
+      const d = new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      return `${d}: ${e.title}`;
+    }).join(' | ');
+    lines.push(`Upcoming events: ${eventLines}`);
   }
 
   // Cycle phase: single line

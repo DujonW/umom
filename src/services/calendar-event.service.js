@@ -1,5 +1,6 @@
 const { config } = require('../config');
 const { createPage, queryDatabase, formatRichText, extractProp } = require('./notion.service');
+const { today } = require('../utils/dateHelpers');
 
 const DB_ID = () => config.notion.databases.calendarEvents;
 
@@ -32,8 +33,9 @@ async function createCalendarEvent(data) {
 
 async function getUpcomingEvents(days = 14) {
   if (!DB_ID()) return [];
-  const from = new Date().toISOString().split('T')[0];
-  const to = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const from = today();
+  const toDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  const to = new Intl.DateTimeFormat('en-CA', { timeZone: process.env.TZ_SCHEDULER || Intl.DateTimeFormat().resolvedOptions().timeZone }).format(toDate);
 
   const pages = await queryDatabase(DB_ID(), {
     and: [
