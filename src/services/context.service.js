@@ -74,4 +74,8 @@ async function assembleContext({ days = 5 } = {}) {
   return result;
 }
 
-module.exports = { assembleContext };
+function clearCache() {
+  _cache = { data: null, expiresAt: 0 };
+}
+
+module.exports = { assembleContext, clearCache };

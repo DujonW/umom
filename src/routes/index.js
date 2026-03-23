@@ -6,6 +6,7 @@ const reportsRoutes = require('./reports.routes');
 const journalRoutes = require('./journal.routes');
 const periodRoutes = require('./period.routes');
 const dumpRoutes = require('./dump.routes');
+const authRoutes = require('./auth.routes');
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/reports', reportsRoutes);
 router.use('/journal', journalRoutes);
 router.use('/period', periodRoutes);
 router.use('/dump', dumpRoutes);
+router.use('/auth', authRoutes);
 
 module.exports = router;
