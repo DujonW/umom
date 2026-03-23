@@ -3,15 +3,15 @@ const { getDB } = require('../config/database');
 
 const TTL_HOURS = 24;
 
-function save(data) {
+function save(data, notionPageId = null) {
   const db = getDB();
   const id = randomUUID();
   const expiresAt = new Date(Date.now() + TTL_HOURS * 60 * 60 * 1000).toISOString();
 
   db.prepare(`
-    INSERT INTO pending_checkins (id, mood, energy, focus, notes, expires_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, data.mood ?? null, data.energy ?? null, data.focus ?? null, data.notes ?? null, expiresAt);
+    INSERT INTO pending_checkins (id, mood, energy, focus, notes, notion_page_id, expires_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, data.mood ?? null, data.energy ?? null, data.focus ?? null, data.notes ?? null, notionPageId, expiresAt);
 
   return id;
 }

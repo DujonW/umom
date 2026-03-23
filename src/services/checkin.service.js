@@ -1,5 +1,5 @@
 const { config } = require('../config');
-const { queryDatabase, createPage, formatRichText, extractProp } = require('./notion.service');
+const { queryDatabase, createPage, updatePage, formatRichText, extractProp } = require('./notion.service');
 const { today, formatForNotion } = require('../utils/dateHelpers');
 
 const DB_ID = () => config.notion.databases.checkins;
@@ -57,4 +57,14 @@ function parseCheckinPage(page) {
   };
 }
 
-module.exports = { saveCheckin, getTodayCheckin, getCheckinHistory };
+async function updateCheckin(pageId, updates) {
+  const props = {};
+  if (updates.mood != null)      props.Mood      = { number: updates.mood };
+  if (updates.energy != null)    props.Energy    = { number: updates.energy };
+  if (updates.focus != null)     props.Focus     = { number: updates.focus };
+  if (updates.notes != null)     props.Notes     = { rich_text: formatRichText(updates.notes) };
+  if (updates.aiResponse != null) props['AI Response'] = { rich_text: formatRichText(updates.aiResponse) };
+  return updatePage(pageId, props);
+}
+
+module.exports = { saveCheckin, updateCheckin, getTodayCheckin, getCheckinHistory };

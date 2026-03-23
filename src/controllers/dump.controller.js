@@ -1,5 +1,5 @@
 const { extractFromDump } = require('../services/dump.service');
-const { saveCheckin } = require('../services/checkin.service');
+const { saveCheckin, updateCheckin } = require('../services/checkin.service');
 const { createTask } = require('../services/task.service');
 const { createEntry } = require('../services/journal.service');
 const { logCycle } = require('../services/period.service');
@@ -63,13 +63,15 @@ async function dump(req, res, next) {
 
     let pendingId = null;
 
-    if (isComplete) {
-      // All three fields present — save immediately
-      await saveCheckin({ ...ci, aiResponse: '', cyclePhase: null }).catch(() => {});
+    if (hasAnyCheckin) {
+      // Always save immediately with whatever fields exist — never block on completeness
+      const savedPage = await saveCheckin({ ...ci, aiResponse: '', cyclePhase: null }).catch(() => null);
       saved.checkin = { mood: ci.mood, energy: ci.energy, focus: ci.focus };
-    } else if (hasAnyCheckin) {
-      // Partial — store and ask for the rest
-      pendingId = pending.save(ci);
+
+      if (!isComplete) {
+        // Store pending with the Notion page ID so follow-up can update the same entry
+        pendingId = pending.save(ci, savedPage?.id ?? null);
+      }
     }
 
     // Generate Mara's response
@@ -143,9 +145,16 @@ async function followup(req, res, next) {
       notes: row.notes,
     };
 
-    // Save regardless — don't keep asking if some fields are still null
+    // Update the existing Notion entry with the newly captured fields
     pending.remove(pendingId);
-    await saveCheckin({ ...merged, aiResponse: '', cyclePhase: null }).catch(() => {});
+    const newFields = {};
+    if (extracted.mood != null)   newFields.mood   = extracted.mood;
+    if (extracted.energy != null) newFields.energy = extracted.energy;
+    if (extracted.focus != null)  newFields.focus  = extracted.focus;
+
+    if (row.notion_page_id && Object.keys(newFields).length > 0) {
+      await updateCheckin(row.notion_page_id, newFields).catch(() => {});
+    }
 
     const aiResponse = await withRetry(() => client.messages.create({
       model: config.claude.model,
