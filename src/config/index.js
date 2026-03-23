@@ -32,6 +32,7 @@ const config = {
       journal: process.env.NOTION_DB_JOURNAL,
       reports: process.env.NOTION_DB_REPORTS,
       cycleLogs: process.env.NOTION_DB_CYCLE_LOGS,
+      calendarEvents: process.env.NOTION_DB_CALENDAR_EVENTS || null, // optional
     },
   },
   sqlite: {

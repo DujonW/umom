@@ -40,6 +40,11 @@ async function updatePage(pageId, properties) {
   return withRetry(() => client.pages.update({ page_id: pageId, properties }));
 }
 
+async function archivePage(pageId) {
+  const client = getNotionClient();
+  return withRetry(() => client.pages.update({ page_id: pageId, archived: true }));
+}
+
 async function getPage(pageId) {
   const client = getNotionClient();
   return withRetry(() => client.pages.retrieve({ page_id: pageId }));
@@ -78,4 +83,4 @@ function extractProp(property) {
   }
 }
 
-module.exports = { queryDatabase, createPage, updatePage, getPage, formatRichText, extractText, extractProp };
+module.exports = { queryDatabase, createPage, updatePage, archivePage, getPage, formatRichText, extractText, extractProp };

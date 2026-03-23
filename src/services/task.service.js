@@ -1,5 +1,5 @@
 const { config } = require('../config');
-const { queryDatabase, createPage, updatePage, formatRichText, extractProp } = require('./notion.service');
+const { queryDatabase, createPage, updatePage, archivePage, formatRichText, extractProp } = require('./notion.service');
 const { today } = require('../utils/dateHelpers');
 
 const DB_ID = () => config.notion.databases.tasks;
@@ -52,7 +52,8 @@ async function updateTask(notionPageId, updates) {
 
 async function deleteTask(notionPageId) {
   // Notion doesn't support deletion via API — archive instead
-  await updatePage(notionPageId, { archived: true });
+  // archived is a top-level field, not a page property
+  await archivePage(notionPageId);
   return true;
 }
 

@@ -66,6 +66,7 @@ NOTION_DB_TASKS=your_32_char_id
 NOTION_DB_JOURNAL=your_32_char_id
 NOTION_DB_REPORTS=your_32_char_id
 NOTION_DB_CYCLE_LOGS=your_32_char_id
+NOTION_DB_CALENDAR_EVENTS=your_32_char_id
 CLAUDE_MODEL=claude-haiku-4-5-20251001
 TZ_SCHEDULER=America/Toronto
 ```
@@ -73,6 +74,7 @@ TZ_SCHEDULER=America/Toronto
 > Copy these values from your local `.env` file.
 > Replace `America/Toronto` with your actual timezone (e.g. `America/Vancouver`, `America/New_York`, `Europe/London`).
 > Do **not** set `PORT` — Railway handles that automatically.
+> `NOTION_DB_CALENDAR_EVENTS` is **optional** — the app works without it. Set it to enable calendar event saving from brain dumps (see below).
 
 4. Click **Update Variables**
 
@@ -179,6 +181,40 @@ Railway will deploy the new version in ~2 minutes with zero downtime.
 **All data persists** — chat history lives on the Railway Volume at `/data/umom.db`, and all check-ins, tasks, journal entries, reports, and cycle logs live in Notion. Nothing resets on redeploy.
 
 **API keys**: your keys on Railway are encrypted secrets. Never commit your local `.env` file to GitHub (it's already in `.gitignore`).
+
+---
+
+## Setting Up Calendar Events (Optional)
+
+This enables Mara to extract appointments and meetings from brain dumps and add them to Notion Calendar.
+
+**How it works:**
+
+- When you mention something time-specific in a brain dump ("dentist Tuesday at 2pm", "team meeting tomorrow at 10"), Mara saves it as a calendar event — separate from your task list.
+- Events with a time appear as timed blocks in Notion Calendar (cal.notion.so). All-day events (no time) appear as full-day entries.
+- Tasks with due dates ("finish report by Friday") continue going into the Tasks database.
+
+**Create the database in Notion:**
+
+Create a new full-page database called **Calendar Events** with these properties:
+
+| Property name | Type | Notes |
+| --- | --- | --- |
+| Title | Title | Already exists by default |
+| Date | Date | Enable "Include time" toggle |
+| Notes | Text | For event details |
+
+Then:
+
+1. Copy the database ID from the URL: `notion.so/YOUR_WORKSPACE/`**`xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`**`?v=...`
+2. Share the database with your Umom integration (click ··· → Add connections → Umom Coach)
+3. Add `NOTION_DB_CALENDAR_EVENTS=your_32_char_id` to your Railway variables
+
+**Connect to Notion Calendar:**
+
+1. Go to [cal.notion.so](https://cal.notion.so) and sign in
+2. Click the **+** next to "My calendars" → select your Calendar Events database
+3. Your events will now appear alongside your calendar — timed events show as blocks, all-day events show at the top of the day
 
 ---
 

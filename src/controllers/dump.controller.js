@@ -1,6 +1,7 @@
 const { extractFromDump } = require('../services/dump.service');
 const { saveCheckin, updateCheckin } = require('../services/checkin.service');
 const { createTask } = require('../services/task.service');
+const { createCalendarEvent } = require('../services/calendar-event.service');
 const { createEntry } = require('../services/journal.service');
 const { logCycle } = require('../services/period.service');
 const pending = require('../services/pending-checkin.service');
@@ -21,7 +22,7 @@ async function dump(req, res, next) {
     }
 
     const extracted = await extractFromDump(text);
-    const saved = { checkin: null, tasks: [], journal: null, cycle: null };
+    const saved = { checkin: null, tasks: [], events: [], journal: null, cycle: null };
     const saves = [];
 
     // Save cycle log immediately if period start was mentioned
@@ -39,6 +40,17 @@ async function dump(req, res, next) {
         saves.push(
           createTask({ title: task.title, priority: task.priority || null, dueDate: task.dueDate || null, status: 'To Do' })
             .then((t) => { saved.tasks.push({ title: t.title || task.title, dueDate: task.dueDate || null }); })
+            .catch(() => {})
+        );
+      }
+    }
+
+    // Save calendar events (appointments/meetings with specific times)
+    for (const ev of (extracted.events || [])) {
+      if (ev.title && ev.date) {
+        saves.push(
+          createCalendarEvent({ title: ev.title, date: ev.date, startTime: ev.startTime || null, endTime: ev.endTime || null, notes: ev.notes || null })
+            .then((e) => { if (e) saved.events.push({ title: ev.title, date: ev.date, startTime: ev.startTime || null }); })
             .catch(() => {})
         );
       }
@@ -194,13 +206,19 @@ function buildSummary(saved) {
       .join(', ');
     parts.push(`${saved.tasks.length} task(s): ${taskList}`);
   }
+  if (saved.events.length) {
+    const eventList = saved.events
+      .map((e) => e.startTime ? `"${e.title}" (${e.date} at ${e.startTime})` : `"${e.title}" (${e.date})`)
+      .join(', ');
+    parts.push(`${saved.events.length} calendar event(s): ${eventList}`);
+  }
   if (saved.journal) parts.push('journal entry');
   if (saved.cycle) parts.push(`cycle log (started ${saved.cycle})`);
   return parts.join(', ');
 }
 
 function hasInferredDates(saved) {
-  return saved.tasks.some((t) => t.dueDate);
+  return saved.tasks.some((t) => t.dueDate) || saved.events.length > 0;
 }
 
 module.exports = { dump, followup };

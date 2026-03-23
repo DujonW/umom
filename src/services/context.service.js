@@ -10,12 +10,19 @@ const PHASE_IMPACT = {
   luteal:     'ADHD symptoms often heightened',
 };
 
+// Simple TTL cache — context changes slowly, no need to hit Notion on every AI call
+const TTL_MS = 5 * 60 * 1000; // 5 minutes
+let _cache = { data: null, expiresAt: 0 };
+
 /**
  * Assembles a compact context string (<400 tokens) from Notion data.
  * Injected into every AI system prompt so Haiku has user history.
  * All Notion calls are fire-and-ignore — a failure here never blocks a response.
+ * Results are cached for 5 minutes to avoid hammering the Notion API on every request.
  */
 async function assembleContext({ days = 5 } = {}) {
+  if (_cache.data && Date.now() < _cache.expiresAt) return _cache.data;
+
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const [checkins, tasks, phase] = await Promise.all([
@@ -51,8 +58,9 @@ async function assembleContext({ days = 5 } = {}) {
     lines.push(`Cycle: ${phase.phase} day ${phase.dayOfCycle}${impact ? ` — ${impact}` : ''}`);
   }
 
-  if (lines.length === 1) return ''; // no data available yet — skip injection
-  return lines.join('\n');
+  const result = lines.length === 1 ? '' : lines.join('\n');
+  _cache = { data: result, expiresAt: Date.now() + TTL_MS };
+  return result;
 }
 
 module.exports = { assembleContext };

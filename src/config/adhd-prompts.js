@@ -121,6 +121,7 @@ Schema:
 {
   "checkin": { "mood": <1-10 or null>, "energy": <1-10 or null>, "focus": <1-10 or null>, "notes": <string or null> } or null,
   "tasks": [ { "title": <string>, "priority": <"High"|"Medium"|"Low"|null>, "dueDate": <"YYYY-MM-DD" or null> } ],
+  "events": [ { "title": <string>, "date": <"YYYY-MM-DD">, "startTime": <"HH:MM" 24h or null>, "endTime": <"HH:MM" 24h or null>, "notes": <string or null> } ],
   "journal": { "entry": <string>, "type": <"General"|"Anxiety"|"Reflection"|"Gratitude"> } or null,
   "cycle": { "startDate": <"YYYY-MM-DD"> } or null
 }
@@ -142,11 +143,17 @@ Energy-specific words: dragging/sluggish=3, flat=4, wired/buzzing=8, crashing=2
 
 Rules:
 1. Set checkin only if mood, energy, focus, or general wellbeing is mentioned. Use the scale above to translate any word or phrase. Use null ONLY if that specific dimension is genuinely not mentioned at all.
-2. Add a task entry for every actionable item. Convert relative dates to ISO format based on today (${todayDate}).
-3. Set journal only for emotional, reflective, or personal content that is not a task. null if none.
-4. Set cycle if the user mentions their period started, first day of cycle, or which day of their cycle they are on. Calculate startDate as today minus (dayOfCycle - 1). If period started today, startDate is today. null if not mentioned.
-5. If a category has no data use null (for checkin/journal/cycle) or [] (for tasks).
-6. If the user gives a general statement like "feeling good today" with no per-dimension breakdown, apply the same translated number to all three (mood, energy, focus).
+2. TASK vs EVENT distinction — this is important:
+   - TASK: something to do or complete (with or without a deadline). Examples: "call the insurance company", "finish report by Friday", "buy groceries". Goes in "tasks".
+   - EVENT: a scheduled appointment or commitment at a specific point in time. Examples: "dentist Tuesday at 2pm", "team meeting tomorrow at 10", "doctor's appointment Friday morning". Goes in "events".
+   - If something has a specific TIME mentioned, it is almost always an EVENT.
+   - If something is purely a to-do with a deadline (no specific time), it is a TASK.
+3. Add a task entry for every to-do item. Convert relative dates to ISO format based on today (${todayDate}).
+4. Add an event entry for every scheduled appointment or meeting. Convert relative dates/times to ISO format. Use null for startTime only if no time is mentioned at all (treat as all-day event).
+5. Set journal only for emotional, reflective, or personal content that is not a task or event. null if none.
+6. Set cycle if the user mentions their period started, first day of cycle, or which day of their cycle they are on. Calculate startDate as today minus (dayOfCycle - 1). If period started today, startDate is today. null if not mentioned.
+7. If a category has no data use null (for checkin/journal/cycle) or [] (for tasks/events).
+8. If the user gives a general statement like "feeling good today" with no per-dimension breakdown, apply the same translated number to all three (mood, energy, focus).
 
 Brain dump:
 """
