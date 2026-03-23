@@ -79,6 +79,7 @@ Copy the database ID → this is `NOTION_DB_CHECKINS`
 | Priority          | Select       | Add options: High, Medium, Low               |
 | Tags              | Multi-select | Add your own: Work, Health, Admin, etc.      |
 | Estimated Minutes | Number       | Format: Number                               |
+| Due Date          | Date         | Populated automatically from brain dumps     |
 | Completed At      | Date         |                                              |
 
 Copy the database ID → this is `NOTION_DB_TASKS`
