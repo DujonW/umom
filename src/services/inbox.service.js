@@ -34,7 +34,9 @@ async function pollInbox() {
   });
 
   for (const page of pages) {
-    const text = extractProp(page.properties.Text)?.trim();
+    // Find the title property by type — works regardless of what the column is named
+    const titleProp = Object.values(page.properties).find((p) => p.type === 'title');
+    const text = titleProp ? extractProp(titleProp)?.trim() : null;
     if (!text) {
       await updatePage(page.id, { Status: { select: { name: 'Error' } } }).catch(() => {});
       continue;
