@@ -51,10 +51,15 @@ function parseJournalPage(page) {
   };
 }
 
+async function getRecentEntries(limit = 3) {
+  const pages = await queryDatabase(DB_ID(), undefined, [{ property: 'Date', direction: 'descending' }], limit);
+  return pages.map(parseJournalPage);
+}
+
 async function updateEntry(pageId, updates) {
   const props = {};
   if (updates.aiReflection != null) props['AI Reflection'] = { rich_text: formatRichText(updates.aiReflection) };
   return updatePage(pageId, props);
 }
 
-module.exports = { createEntry, updateEntry, getEntries, getEntry };
+module.exports = { createEntry, updateEntry, getEntries, getEntry, getRecentEntries };

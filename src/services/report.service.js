@@ -129,4 +129,15 @@ function calculateStreak(checkins) {
   return streak;
 }
 
-module.exports = { aggregateWeekData, aggregateMonthData, saveReport };
+async function getLatestReport() {
+  const pages = await queryDatabase(DB_ID(), undefined, [{ property: 'Generated At', direction: 'descending' }], 1);
+  if (!pages.length) return null;
+  const props = pages[0].properties;
+  return {
+    type: extractProp(props.Type),
+    dateRange: extractProp(props['Date Range']),
+    summary: extractProp(props.Summary),
+  };
+}
+
+module.exports = { aggregateWeekData, aggregateMonthData, saveReport, getLatestReport };

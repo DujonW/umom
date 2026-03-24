@@ -2,6 +2,8 @@ const { getCheckinHistory } = require('./checkin.service');
 const { getTasks } = require('./task.service');
 const { getCurrentPhase } = require('./period.service');
 const { getUpcomingEvents } = require('./calendar-event.service');
+const { getRecentEntries } = require('./journal.service');
+const { getLatestReport } = require('./report.service');
 const { today, formatForNotion } = require('../utils/dateHelpers');
 
 const PHASE_IMPACT = {
@@ -26,11 +28,13 @@ async function assembleContext({ days = 5 } = {}) {
 
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const [checkins, tasks, phase, events] = await Promise.all([
+  const [checkins, tasks, phase, events, journalEntries, latestReport] = await Promise.all([
     getCheckinHistory(startDate, new Date()).catch(() => []),
     getTasks({}).catch(() => []),
     getCurrentPhase().catch(() => null),
     getUpcomingEvents(14).catch(() => []),
+    getRecentEntries(3).catch(() => []),
+    getLatestReport().catch(() => null),
   ]);
 
   const lines = ['--- Your Recent Context ---'];
@@ -61,6 +65,23 @@ async function assembleContext({ days = 5 } = {}) {
       return `${d}: ${e.title}`;
     }).join(' | ');
     lines.push(`Upcoming events: ${eventLines}`);
+  }
+
+  // Recent journal entries: type tag + first 60 chars of entry text
+  if (journalEntries.length > 0) {
+    const journalLine = journalEntries
+      .map((j) => {
+        const snippet = (j.entry || '').slice(0, 60);
+        return `[${j.type || 'General'}] "${snippet}${j.entry?.length > 60 ? '…' : ''}"`;
+      })
+      .join(' | ');
+    lines.push(`Recent journal: ${journalLine}`);
+  }
+
+  // Most recent report: type + date range + first 150 chars of summary
+  if (latestReport?.summary) {
+    const snippet = latestReport.summary.slice(0, 150);
+    lines.push(`Last ${(latestReport.type || 'report').toLowerCase()} (${latestReport.dateRange}): ${snippet}${latestReport.summary.length > 150 ? '…' : ''}`);
   }
 
   // Cycle phase: single line

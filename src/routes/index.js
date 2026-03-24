@@ -1,5 +1,4 @@
 const { Router } = require('express');
-const checkinRoutes = require('./checkin.routes');
 const chatRoutes = require('./chat.routes');
 const tasksRoutes = require('./tasks.routes');
 const reportsRoutes = require('./reports.routes');
@@ -14,7 +13,6 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'umom-api' });
 });
 
-router.use('/checkin', checkinRoutes);
 router.use('/chat', chatRoutes);
 router.use('/tasks', tasksRoutes);
 router.use('/reports', reportsRoutes);

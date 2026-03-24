@@ -7,11 +7,12 @@ const { withRetry } = require('../utils/retry');
  * All network calls are wrapped with withRetry to handle transient Notion API errors.
  */
 
-async function queryDatabase(databaseId, filter = undefined, sorts = undefined) {
+async function queryDatabase(databaseId, filter = undefined, sorts = undefined, pageSize = undefined) {
   const client = getNotionClient();
   const params = { database_id: databaseId };
   if (filter) params.filter = filter;
   if (sorts) params.sorts = sorts;
+  if (pageSize) params.page_size = pageSize;
 
   const pages = [];
   let cursor;
@@ -21,6 +22,7 @@ async function queryDatabase(databaseId, filter = undefined, sorts = undefined) 
     const response = await withRetry(() => client.databases.query(params));
     pages.push(...response.results);
     cursor = response.next_cursor;
+    if (pageSize) break; // only fetch first page when a limit is specified
   } while (cursor);
 
   return pages;
