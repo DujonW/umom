@@ -5,6 +5,7 @@ const { requestLogger } = require('./middleware/requestLogger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const routes = require('./routes');
+const braindumpPage = require('./routes/braindump-page.routes');
 
 function createApp() {
   const app = express();
@@ -24,6 +25,9 @@ function createApp() {
 
   // General rate limit
   app.use(generalLimiter);
+
+  // Brain dump web page — GET/POST /brain-dump?key=SECRET
+  app.use('/brain-dump', braindumpPage);
 
   // API routes
   app.use('/api', routes);
