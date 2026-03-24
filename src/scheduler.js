@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const { aggregateWeekData, aggregateMonthData, saveReport } = require('./services/report.service');
 const { generateWeeklySummary, generateMonthlySummary } = require('./services/ai.service');
 const { assembleContext } = require('./services/context.service');
+const { pollInbox } = require('./services/inbox.service');
 
 const TZ = process.env.TZ_SCHEDULER || 'America/Los_Angeles';
 
@@ -54,7 +55,10 @@ function startScheduler() {
     }
   }, { timezone: TZ });
 
-  console.log(`[scheduler] Crons registered — weekly (Sun 08:00) and monthly (1st 08:30) [${TZ}]`);
+  // Notion inbox poll — every 10 seconds (no-op if NOTION_DB_INBOX not set)
+  cron.schedule('*/10 * * * * *', () => { pollInbox().catch(() => {}); }, { timezone: TZ });
+
+  console.log(`[scheduler] Crons registered — weekly (Sun 08:00), monthly (1st 08:30), inbox poll (10s) [${TZ}]`);
 }
 
 module.exports = { startScheduler };
