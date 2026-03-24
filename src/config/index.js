@@ -33,7 +33,7 @@ const config = {
       reports: process.env.NOTION_DB_REPORTS,
       cycleLogs: process.env.NOTION_DB_CYCLE_LOGS,
       calendarEvents: process.env.NOTION_DB_CALENDAR_EVENTS || null, // optional
-      inbox: process.env.NOTION_DB_INBOX || null, // optional — Brain Dump Inbox
+      inbox: process.env.NOTION_DB_INBOX || null, // optional — "What's on Your Mind?" inbox
     },
   },
   sqlite: {
